@@ -5,6 +5,11 @@ from langchain.document_loaders.unstructured import UnstructuredFileLoader
 from paddleocr import PaddleOCR
 import os
 import nltk
+
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from configs.model_config import NLTK_DATA_PATH
 
 nltk.data.path = [NLTK_DATA_PATH] + nltk.data.path
@@ -33,8 +38,6 @@ class UnstructuredPaddleImageLoader(UnstructuredFileLoader):
       
       
 if __name__ == "__main__":
-    import sys
-    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
     filepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), "knowledge_base", "samples", "content", "test.jpg")
     loader = UnstructuredPaddleImageLoader(filepath, mode="elements")
     docs = loader.load()

@@ -134,6 +134,10 @@
 
 * 执行 python webui.py 启动服务
 
+  * 启动成功的示例
+
+    ![image-webui本地服务启动成功](./langchain-chatglm学习笔记/image-webui本地服务启动成功.png)
+
 * 启动中可能存在的问题
 
   * 报错多份OpenMP存在，此时，需要在全局配置允许多份存在
@@ -154,19 +158,19 @@
         ```sh
         $env:KMP_DUPLICATE_LIB_OK="TRUE"
         ```
-	
-	  * 但是，更根本的解决方案是确保你的程序只链接了一份 OpenMP 库。这可能需要你检查你的 Python 环境中安装的所有库，并确保它们都是使用相同的 OpenMP 库编译的。这可能会涉及到重新编译一些库，或者在安装库的时候指定使用特定的 OpenMP 库。这里推测是 NumPy 和 PyTorch 造成的。在安装 pytorch gpu 版本时，单独走了另外的安装源，从而无法确保它们是从同一个源安装的，并且是兼容的版本，从而导致问题出现。
-	* 显存不足
-	
-	  * 由于 本地向量库 和 大语言模型 都会默认使用 gpu 中的显存，而这里用的向量模型大概需要 3G，大语言模型则需要6G，因而，若都用gpu则无法支撑，目前本地的显卡为 RTX2060 6G 显存
-	
-	  * 解决方案：
-	
-	    * 在 configs/model_config.py 中，配置 向量库的驱动直接使用cpu
-	
-	      ```python
-	      # Embedding running device
-	      # EMBEDDING_DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
-	      EMBEDDING_DEVICE = "cpu"
-	      ```
-	* 其他
+
+    * 但是，更根本的解决方案是确保你的程序只链接了一份 OpenMP 库。这可能需要你检查你的 Python 环境中安装的所有库，并确保它们都是使用相同的 OpenMP 库编译的。这可能会涉及到重新编译一些库，或者在安装库的时候指定使用特定的 OpenMP 库。这里推测是 NumPy 和 PyTorch 造成的。在安装 pytorch gpu 版本时，单独走了另外的安装源，从而无法确保它们是从同一个源安装的，并且是兼容的版本，从而导致问题出现。
+  * 显存不足
+
+    * 由于 本地向量库 和 大语言模型 都会默认使用 gpu 中的显存，而这里用的向量模型大概需要 3G，大语言模型则需要6G，因而，若都用gpu则无法支撑，目前本地的显卡为 RTX2060 6G 显存
+
+    * 解决方案：
+
+      * 在 configs/model_config.py 中，配置 向量库的驱动直接使用cpu
+
+        ```python
+        # Embedding running device
+        # EMBEDDING_DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+        EMBEDDING_DEVICE = "cpu"
+        ```
+  * 其他

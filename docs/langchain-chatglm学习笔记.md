@@ -97,7 +97,8 @@
 
 * 下载并安装对应 CUDA 11.7
 
-  * 下载地址：
+  * 直接去英伟达官方下载，可以通过 google CUDA 11.7 download 直接到达下载页面
+  * 下载地址：https://developer.nvidia.com/cuda-11-7-0-download-archive?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local
 
 ### 下载模型文件，配置读取本地模型
 
@@ -160,6 +161,7 @@
         ```
 
     * 但是，更根本的解决方案是确保你的程序只链接了一份 OpenMP 库。这可能需要你检查你的 Python 环境中安装的所有库，并确保它们都是使用相同的 OpenMP 库编译的。这可能会涉及到重新编译一些库，或者在安装库的时候指定使用特定的 OpenMP 库。这里推测是 NumPy 和 PyTorch 造成的。在安装 pytorch gpu 版本时，单独走了另外的安装源，从而无法确保它们是从同一个源安装的，并且是兼容的版本，从而导致问题出现。
+
   * 显存不足
 
     * 由于 本地向量库 和 大语言模型 都会默认使用 gpu 中的显存，而这里用的向量模型大概需要 3G，大语言模型则需要6G，因而，若都用gpu则无法支撑，目前本地的显卡为 RTX2060 6G 显存
@@ -173,4 +175,27 @@
         # EMBEDDING_DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         EMBEDDING_DEVICE = "cpu"
         ```
-  * 其他
+
+## 使用问题记录
+
+* 在使用知识库时，可能会由于给到 大语言模型 的 prompt 内容过多，导致显存溢出，此时，可以通过配置查询量来间接减少性能需求
+
+  * 报错示例：
+
+    * torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 128.00 MiB (GPU 0; 6.00 GiB total capacity; 5.01 GiB already allocated; 0 bytes free; 5.28 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+
+  * 解决方案：
+
+    * 在官方的 文档中也有说明，本质上也就是减小 prompt 内容
+
+    * 在 configs/model_config.py 中，配置如下：
+
+      ```py
+      # 传入LLM的历史记录长度
+      LLM_HISTORY_LEN = 2
+      
+      # 知识库检索时返回的匹配内容条数
+      VECTOR_SEARCH_TOP_K = 3
+      ```
+
+      

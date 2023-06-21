@@ -129,7 +129,10 @@
 
     * 执行安装：
 
+      * pip install https://download.pytorch.org/whl/cu117/torch-2.0.1%2Bcu117-cp310-cp310-win_amd64.whl
+      
       ![image-torch-gpu版本安装](./langchain-chatglm学习笔记/image-torch-gpu版本安装.png)
+      
 
 ### 启动项目
 

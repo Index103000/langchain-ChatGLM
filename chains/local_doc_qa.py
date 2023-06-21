@@ -1,23 +1,24 @@
-from langchain.embeddings.huggingface import HuggingFaceEmbeddings
-from vectorstores import MyFAISS
-from langchain.document_loaders import UnstructuredFileLoader, TextLoader, CSVLoader
-from configs.model_config import *
 import datetime
-from textsplitter import ChineseTextSplitter
+from functools import lru_cache
 from typing import List
-from utils import torch_gc
-from tqdm import tqdm
+
+from langchain.docstore.document import Document
+from langchain.document_loaders import UnstructuredFileLoader, TextLoader, CSVLoader
+from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from pypinyin import lazy_pinyin
-from loader import UnstructuredPaddleImageLoader, UnstructuredPaddlePDFLoader
-from models.base import (BaseAnswer,
-                         AnswerResult)
-from models.loader.args import parser
-from models.loader import LoaderCheckPoint
+from tqdm import tqdm
+
 import models.shared as shared
 from agent import bing_search
-from langchain.docstore.document import Document
-from functools import lru_cache
+from configs.model_config import *
+from loader import UnstructuredPaddleImageLoader, UnstructuredPaddlePDFLoader
+from models.base import (BaseAnswer)
+from models.loader import LoaderCheckPoint
+from models.loader.args import parser
+from textsplitter import ChineseTextSplitter
 from textsplitter.zh_title_enhance import zh_title_enhance
+from utils import torch_gc
+from vectorstores import MyFAISS
 
 
 # patch HuggingFaceEmbeddings to make it hashable
@@ -230,16 +231,33 @@ class LocalDocQA:
         vector_store.score_threshold = self.score_threshold
         related_docs_with_score = vector_store.similarity_search_with_score(query, k=self.top_k)
         torch_gc()
+        # if len(related_docs_with_score) > 0:
+        #     prompt = generate_prompt(related_docs_with_score, query)
+        # else:
+        #     prompt = query
+
         if len(related_docs_with_score) > 0:
             prompt = generate_prompt(related_docs_with_score, query)
-        else:
-            prompt = query
 
-        for answer_result in self.llm.generatorAnswer(prompt=prompt, history=chat_history,
-                                                      streaming=streaming):
-            resp = answer_result.llm_output["answer"]
-            history = answer_result.history
-            history[-1][0] = query
+            for answer_result in self.llm.generatorAnswer(prompt=prompt, history=chat_history,
+                                                          streaming=streaming):
+                resp = answer_result.llm_output["answer"]
+                history = answer_result.history
+                history[-1][0] = query
+                response = {"query": query,
+                            "result": resp,
+                            "source_documents": related_docs_with_score}
+                yield response, history
+        else:
+            resp = """
+{
+    "code": 500,
+    "msg": "抱歉，在知识库中未能解析到答案",
+    "data": ""
+}
+            """
+            history = chat_history
+            history += [[query, resp]]
             response = {"query": query,
                         "result": resp,
                         "source_documents": related_docs_with_score}
@@ -295,7 +313,7 @@ class LocalDocQA:
     def update_file_from_vector_store(self,
                                       filepath: str or List[str],
                                       vs_path,
-                                      docs: List[Document],):
+                                      docs: List[Document], ):
         vector_store = load_vector_store(vs_path, self.embeddings)
         status = vector_store.update_doc(filepath, docs)
         return status

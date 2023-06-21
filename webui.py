@@ -9,8 +9,9 @@ from models.loader.args import parser
 from models.loader import LoaderCheckPoint
 import os
 
-nltk.data.path = [NLTK_DATA_PATH] + nltk.data.path
+logger.setLevel(logging.DEBUG)
 
+nltk.data.path = [NLTK_DATA_PATH] + nltk.data.path
 
 def get_vs_list():
     lst_default = ["新建知识库"]
@@ -106,7 +107,8 @@ def init_model():
         local_doc_qa.init_cfg(llm_model=llm_model_ins)
         generator = local_doc_qa.llm.generatorAnswer("你好")
         for answer_result in generator:
-            print(answer_result.llm_output)
+            # print(answer_result.llm_output)
+            logger.info(f"得到模型回答：{answer_result.llm_output}")
         reply = """模型已成功加载，可以开始对话，或从右侧选择模式后开始对话"""
         logger.info(reply)
         return reply
@@ -293,6 +295,7 @@ def delete_vs(vs_id, chatbot):
         chatbot = chatbot + [[None, status]]
         return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), \
                gr.update(visible=True), chatbot, gr.update(visible=True)
+
 
 
 block_css = """.importantButton {
@@ -554,10 +557,12 @@ with gr.Blocks(css=block_css, theme=gr.themes.Default(**default_theme_args)) as 
         show_progress=False,
     )
 
-(demo
- .queue(concurrency_count=3)
- .launch(server_name='0.0.0.0',
-         server_port=7860,
-         show_api=False,
-         share=False,
-         inbrowser=False))
+if __name__ == "__main__":
+    (demo
+     .queue(concurrency_count=3)
+     .launch(server_name='0.0.0.0',
+             server_port=7860,
+             show_api=True,
+             share=False,
+             inbrowser=False))
+

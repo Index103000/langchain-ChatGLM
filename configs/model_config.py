@@ -26,9 +26,8 @@ embedding_model_dict = {
 EMBEDDING_MODEL = "text2vec"
 
 # Embedding running device
-# EMBEDDING_DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
-EMBEDDING_DEVICE = "cpu"
-
+EMBEDDING_DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+# EMBEDDING_DEVICE = "cpu"
 
 # supported LLM models
 # llm_model_dict 处理了loader的一些预设行为，如加载位置，模型名称，模型处理器实例
@@ -97,6 +96,18 @@ llm_model_dict = {
         "provides": "FastChatOpenAILLM",  # 使用fastchat api时，需保证"provides"为"FastChatOpenAILLM"
         "api_base_url": "http://localhost:8000/v1"  # "name"修改为fastchat服务中的"api_base_url"
     },
+
+    # 通过 openai 调用的模型请参考如下格式
+    "openai": {
+        # "name": "gpt-3.5-turbo-0613",  # "name"修改为openai服务中的"model_name"
+        "name": "gpt-3.5-turbo-16k-0613",  # "name"修改为openai服务中的"model_name"
+        # "pretrained_model_name": "gpt-3.5-turbo-0613",
+        "pretrained_model_name": "gpt-3.5-turbo-16k-0613",
+        "local_model_path": None,
+        "provides": "OpenAILLM",  # 使用openai api时，需保证"provides"为"OpenAILLM"
+        "api_key": "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", # openai服务的 api_key
+        "api_base_url": "https://api.openai.com/v1"  # openai服务中的"api_base_url"
+    },
 }
 
 # LLM 名称
@@ -125,10 +136,10 @@ LLM_DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mp
 KB_ROOT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "knowledge_base")
 
 # 基于上下文的prompt模版，请务必保留"{question}"和"{context}"
-PROMPT_TEMPLATE = """已知信息：
-{context}
-
-根据上述已知信息，简洁和专业的来回答用户的问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题” 或 “没有提供足够的相关信息”，不允许在答案中添加编造成分，答案请使用中文。 问题是：{question}"""
+# PROMPT_TEMPLATE = """已知信息：
+# {context}
+#
+# 根据上述已知信息，简洁和专业的来回答用户的问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题” 或 “没有提供足够的相关信息”，不允许在答案中添加编造成分，答案请使用中文。 问题是：{question}"""
 
 # PROMPT_TEMPLATE = """
 # 根据已知信息，以pcb工程师的角度回答问题，以json格式返回结果。
@@ -146,6 +157,20 @@ PROMPT_TEMPLATE = """已知信息：
 # 问题：{question}
 # """
 
+# 分隔符
+delimiter = "####"
+
+PROMPT_TEMPLATE = """
+给定知识内容如下：\n
+####
+{context}
+####
+\n
+根据给定知识内容，回答下面的问题：\n
+{question}
+"""
+
+
 # 缓存知识库数量
 CACHED_VS_NUM = 1
 
@@ -156,10 +181,10 @@ SENTENCE_SIZE = 100
 CHUNK_SIZE = 250
 
 # 传入LLM的历史记录长度
-LLM_HISTORY_LEN = 0
+LLM_HISTORY_LEN = 3
 
 # 知识库检索时返回的匹配内容条数
-VECTOR_SEARCH_TOP_K = 2
+VECTOR_SEARCH_TOP_K = 5
 
 # 知识检索内容相关度 Score, 数值范围约为0-1100，如果为0，则不生效，经测试设置为小于500时，匹配结果更精准
 VECTOR_SEARCH_SCORE_THRESHOLD = 0
@@ -178,7 +203,7 @@ flagging username: {FLAG_USER_NAME}
 
 # 是否开启跨域，默认为False，如果需要开启，请设置为True
 # is open cross domain
-OPEN_CROSS_DOMAIN = False
+OPEN_CROSS_DOMAIN = True
 
 # Bing 搜索必备变量
 # 使用 Bing 搜索需要使用 Bing Subscription Key,需要在azure port中申请试用bing search

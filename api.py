@@ -15,12 +15,12 @@ from typing_extensions import Annotated
 from starlette.responses import RedirectResponse
 
 from chains.local_doc_qa import LocalDocQA
-from configs.model_config import (KB_ROOT_PATH, EMBEDDING_DEVICE,
-                                  EMBEDDING_MODEL, NLTK_DATA_PATH,
-                                  VECTOR_SEARCH_TOP_K, LLM_HISTORY_LEN, OPEN_CROSS_DOMAIN)
+from configs.model_config import *
 import models.shared as shared
 from models.loader.args import parser
 from models.loader import LoaderCheckPoint
+
+logger.setLevel(logging.DEBUG)
 
 nltk.data.path = [NLTK_DATA_PATH] + nltk.data.path
 
@@ -163,7 +163,7 @@ async def list_kbs():
 
 
 async def list_docs(
-        knowledge_base_id: Optional[str] = Query(default=None, description="Knowledge Base Name", example="kb1")
+        knowledge_base_id: Optional[str] = Query(default="samples", description="Knowledge Base Name", example="kb1")
 ):
     local_doc_folder = get_folder_path(knowledge_base_id)
     if not os.path.exists(local_doc_folder):

@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  langchan-chatglm:
+    image: langchain-chatglm-cuda-env:1.0.0-dev
+    container_name: langchain-chatglm
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      # 时区上海
+      TZ: Asia/Shanghai
+    ports:
+      # webui
+      - "7860:7860"
+      # api
+      - "7861:7861"
+    volumes:
+      - /newdata/llm/project/langchain-ChatGLM:/langchain-ChatGLM
+    command: ["python3", "-u", "webui.py"]
+    privileged: true
+    network_mode: "host"
+
+  nginx-web:
+    image: nginx:1.22.1
+    container_name: nginx-web
+    environment:
+      # 时区上海
+      TZ: Asia/Shanghai
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # 证书映射
+      - /docker/nginx/cert:/etc/nginx/cert
+      # 配置文件映射
+      - /docker/nginx/conf/nginx.conf:/etc/nginx/nginx.conf
+      # 页面目录
+      - /docker/nginx/html:/usr/share/nginx/html
+      # 日志目录
+      - /docker/nginx/log:/var/log/nginx
+    privileged: true
+    network_mode: "host"

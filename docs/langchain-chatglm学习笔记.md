@@ -179,6 +179,89 @@
         EMBEDDING_DEVICE = "cpu"
         ```
 
+## 线上环境部署
+
+* 线上服务器拥有更大的显存且性能更强
+
+* 服务器连接信息
+
+  * langchain-ChatGLM
+
+    * ec2-161-189-151-215.cn-northwest-1.compute.amazonaws.com.cn
+    * 161.189.151.215
+
+    * ubuntu
+    * 秘钥文件：[ec2-for-pcb.pem](./langchain-chatglm学习笔记/服务器秘钥/ec2-for-pcb.pem)
+
+  * 服务器显卡信息
+
+    ```sh
+    # 查看显卡信息
+    (base) ubuntu@ip-172-31-15-150:/newdata/llm/project$ nvidia-smi
+    Wed Jun 28 07:04:02 2023
+    +-----------------------------------------------------------------------------+
+    | NVIDIA-SMI 515.105.01   Driver Version: 515.105.01   CUDA Version: 11.7     |
+    |-------------------------------+----------------------+----------------------+
+    | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+    | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+    |                               |                      |               MIG M. |
+    |===============================+======================+======================|
+    |   0  Tesla T4            Off  | 00000000:00:1E.0 Off |                    0 |
+    | N/A   45C    P0    27W /  70W |      0MiB / 15360MiB |      0%      Default |
+    |                               |                      |                  N/A |
+    +-------------------------------+----------------------+----------------------+
+    
+    +-----------------------------------------------------------------------------+
+    | Processes:                                                                  |
+    |  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+    |        ID   ID                                                   Usage      |
+    |=============================================================================|
+    |  No running processes found                                                 |
+    +-----------------------------------------------------------------------------+
+    (base) ubuntu@ip-172-31-15-150:/newdata/llm/project$
+    
+    ```
+
+* docker部署
+
+  * 为了能让容器使用主机GPU资源，需要在主机上安装 [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)。具体安装步骤如下：
+
+      ```
+      sudo apt-get update
+      sudo apt-get install -y nvidia-container-toolkit-base
+      sudo systemctl daemon-reload 
+      sudo systemctl restart docker
+      ```
+  
+  * 使用 git 拉取代码，若git拉取缓慢，建议直接打包本地代码，再到线上解压
+  
+  * 创建 model 目录，将 chatglm-6b-int4.zip 和 text2vec-large-chinese.zip 包放到model目录下
+  
+  * 在 langchain-ChatGLM 目录下，执行创建 docker 镜像的操作
+  
+    ```sh
+    docker build -f Dockerfile-cuda-env -t langchain-chatglm-cuda-env:1.0.0-dev .
+    ```
+  
+    * 这个 Docker 命令是用来构建一个 Docker 镜像的。我将为你详细解析这个命令：
+  
+      - `docker build`: 这是 Docker 的一个命令，用于从 Dockerfile 构建镜像。
+      - `-f Dockerfile-cuda-env`: `-f` 参数后面接的是 Dockerfile 的文件名，这里的文件名是 `Dockerfile-cuda`。如果你不指定 `-f` 参数，Docker 会默认使用当前目录下名为 `Dockerfile` 的文件。
+      - `-t clangchain-ChatGLM-cuda-env:1.0.0-dev`: `-t` 参数是用来给构建的镜像命名的。这里，镜像的名字是 `clangchain-ChatGLM-cuda-env`，标签（tag）是 `1.0.0-dev`。镜像的名字和标签之间用冒号隔开。如果你不指定标签，Docker 会默认使用 `latest` 作为标签。
+      - `.`: 这个点表示 Dockerfile 所在的路径，这里是当前路径。Docker 会在这个路径下寻找 Dockerfile 并根据 Dockerfile 构建镜像。
+  
+      所以，这个命令的意思是在当前目录下，根据 `Dockerfile-cuda` 这个 Dockerfile，构建一个名为 `chatglm-cuda`，标签为 `latest` 的 Docker 镜像。
+  
+  * 在 langchain-ChatGLM 目录的 docker 目录下，执行 docker compose 命令，创建并启动容器
+  
+      ```sh
+      docker compose up -d langchain-chatglm
+      ```
+  
+      
+  
+  * 其他
+
 ## 使用问题记录
 
 * 在使用知识库时，可能会由于给到 大语言模型 的 prompt 内容过多，导致显存溢出，此时，可以通过配置查询量来间接减少性能需求

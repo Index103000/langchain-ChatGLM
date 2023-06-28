@@ -224,8 +224,52 @@
 
 * docker部署
 
-  * 为了能让容器使用主机GPU资源，需要在主机上安装 [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)。具体安装步骤如下：
+  * 由于大语言模型一般都比较大，因而，若用docker部署，有可能面临需要修改docker存储镜像的位置，如下是修改步骤
 
+      Docker 默认会在 "/var/lib/docker" 目录下存储其所有的数据，包括镜像、容器、卷和网络等。如果你想更改 Docker 的默认存储目录，可以通过以下步骤进行操作：
+  
+      1. **停止 Docker 服务**
+  
+         首先，你需要停止当前运行的 Docker 服务。在 Linux 系统中，可以使用以下命令：
+  
+         ```sh
+         sudo systemctl stop docker
+         ```
+  
+      2. **移动 Docker 数据**
+  
+         接下来，将 "/var/lib/docker" 目录下的数据移动到新的位置。例如，如果你想把 Docker 的数据存储到 "/mnt/new_disk/docker"，你可以使用以下命令：
+  
+         ```sh
+         sudo mv /var/lib/docker /mnt/new_disk/docker
+         ```
+  
+         注意替换 "/mnt/new_disk/docker" 为你的新的存储位置。
+  
+      3. **更新 Docker 配置**
+  
+         接下来，你需要更新 Docker 的配置，让 Docker 使用新的目录存储数据。你可以通过编辑 Docker 的服务配置文件来实现。在 Linux 系统中，Docker 的服务配置文件通常位于 "/etc/docker/daemon.json"。如果这个文件不存在，你可以创建一个新的。你需要在这个文件中添加一个 "data-root" 配置项，指向新的存储目录，如下所示：
+  
+         ```json
+         {
+             "data-root": "/mnt/new_disk/docker"
+         }
+         ```
+  
+         确保你将 "/mnt/new_disk/docker" 替换为你的新的存储位置。
+  
+      4. **重启 Docker 服务**
+  
+         最后，重新启动 Docker 服务，让新的配置生效：
+  
+         ```sh
+         sudo systemctl start docker
+         ```
+  
+      这样，Docker 就会在新的目录下存储其所有的数据了。请注意，这个过程需要管理员权限，所以在运行命令时可能需要使用 sudo。同时，确保在移动数据和更改配置时，新的存储位置有足够的磁盘空间，否则 Docker 可能会因为磁盘空间不足而无法运行。
+  
+  * 为了能让容器使用主机GPU资源，需要在主机上安装 [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)。具体安装步骤如下：
+  
       ```
       sudo apt-get update
       sudo apt-get install -y nvidia-container-toolkit-base
@@ -255,7 +299,68 @@
   * 在 langchain-ChatGLM 目录的 docker 目录下，执行 docker compose 命令，创建并启动容器
   
       ```sh
-      docker compose up -d langchain-chatglm
+      docker compose up -d langchain-chatglm-api
+      ```
+  
+      这里使用的 docker-compose.yml 内容中，包含有对应服务的启动命令，比如启动 webui 或 api 服务等
+  
+      ```yacas
+      version: '3'
+      
+      services:
+        langchan-chatglm-webui:
+          image: langchain-chatglm-cuda-env:1.0.0-dev
+          container_name: langchain-chatglm-webui
+          environment:
+            NVIDIA_VISIBLE_DEVICES: all
+            # 时区上海
+            TZ: Asia/Shanghai
+          ports:
+            # webui
+            - "7860:7860"
+          volumes:
+            - /newdata/llm/project/langchain-ChatGLM:/langchain-ChatGLM
+          command: ["python3", "-u", "webui.py"]
+          privileged: true
+          network_mode: "host"
+      
+        langchan-chatglm-api:
+          image: langchain-chatglm-cuda-env:1.0.0-dev
+          container_name: langchain-chatglm-api
+          environment:
+            NVIDIA_VISIBLE_DEVICES: all
+            # 时区上海
+            TZ: Asia/Shanghai
+          ports:
+            - "7861:7861"
+          volumes:
+            - /newdata/llm/project/langchain-ChatGLM:/langchain-ChatGLM
+          command: [ "python3", "-u", "api.py" ]
+          privileged: true
+          network_mode: "host"
+      
+        nginx-web:
+          image: nginx:1.22.1
+          container_name: nginx-web
+          environment:
+            # 时区上海
+            TZ: Asia/Shanghai
+          ports:
+            - "80:80"
+            - "443:443"
+          volumes:
+            # 证书映射
+            - /docker/nginx/cert:/etc/nginx/cert
+            # 配置文件映射
+            - /docker/nginx/conf/nginx.conf:/etc/nginx/nginx.conf
+            # 页面目录
+            - /docker/nginx/html:/usr/share/nginx/html
+            # 日志目录
+            - /docker/nginx/log:/var/log/nginx
+          privileged: true
+          network_mode: "host"
+      
+      
       ```
   
       

@@ -19,11 +19,12 @@ embedding_model_dict = {
     # "text2vec": "GanymedeNil/text2vec-large-chinese",
     "text2vec": "model/text2vec-large-chinese",
     "m3e-small": "moka-ai/m3e-small",
-    "m3e-base": "moka-ai/m3e-base",
+    # "m3e-base": "moka-ai/m3e-base",
+    "m3e-base": "model/m3e-base",
 }
 
 # Embedding model name
-EMBEDDING_MODEL = "text2vec"
+EMBEDDING_MODEL = "m3e-base"
 
 # Embedding running device
 EMBEDDING_DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
@@ -59,7 +60,12 @@ llm_model_dict = {
         "local_model_path": None,
         "provides": "ChatGLM"
     },
-
+    "chatglm2-6b": {
+        "name": "chatglm2-6b",
+        "pretrained_model_name": "THUDM/chatglm2-6b",
+        "local_model_path": "model/chatglm2-6b",
+        "provides": "ChatGLM"
+    },
     "chatyuan": {
         "name": "chatyuan",
         "pretrained_model_name": "ClueAI/ChatYuan-large-v2",
@@ -111,7 +117,7 @@ llm_model_dict = {
 }
 
 # LLM 名称
-LLM_MODEL = "openai"
+LLM_MODEL = "chatglm2-6b"
 # 量化加载8bit 模型
 LOAD_IN_8BIT = False
 # Load the model with bfloat16 precision. Requires NVIDIA Ampere GPU.

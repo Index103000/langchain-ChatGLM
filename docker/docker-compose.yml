@@ -1,9 +1,9 @@
 version: '3'
 
 services:
-  langchan-chatglm:
+  langchan-chatglm-webui:
     image: langchain-chatglm-cuda-env:1.0.0-dev
-    container_name: langchain-chatglm
+    container_name: langchain-chatglm-webui
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       # 时区上海
@@ -11,11 +11,24 @@ services:
     ports:
       # webui
       - "7860:7860"
-      # api
-      - "7861:7861"
     volumes:
       - /newdata/llm/project/langchain-ChatGLM:/langchain-ChatGLM
     command: ["python3", "-u", "webui.py"]
+    privileged: true
+    network_mode: "host"
+
+  langchan-chatglm-api:
+    image: langchain-chatglm-cuda-env:1.0.0-dev
+    container_name: langchain-chatglm-api
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      # 时区上海
+      TZ: Asia/Shanghai
+    ports:
+      - "7861:7861"
+    volumes:
+      - /newdata/llm/project/langchain-ChatGLM:/langchain-ChatGLM
+    command: [ "python3", "-u", "api.py" ]
     privileged: true
     network_mode: "host"
 

@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  langchan-chatglm-webui:
+  langchain-chatglm-webui:
     image: langchain-chatglm-cuda-env:1.0.0-dev
     container_name: langchain-chatglm-webui
     environment:
@@ -17,7 +17,7 @@ services:
     privileged: true
     network_mode: "host"
 
-  langchan-chatglm-api:
+  langchain-chatglm-api:
     image: langchain-chatglm-cuda-env:1.0.0-dev
     container_name: langchain-chatglm-api
     environment:

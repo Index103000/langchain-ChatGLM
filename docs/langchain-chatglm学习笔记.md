@@ -279,9 +279,7 @@
   
   * 使用 git 拉取代码，若git拉取缓慢，建议直接打包本地代码，再到线上解压
   
-  * 创建 model 目录，将 chatglm-6b-int4.zip 和 text2vec-large-chinese.zip 包放到model目录下
-  
-  * 在 langchain-ChatGLM 目录下，执行创建 docker 镜像的操作
+  * 在 langchain-ChatGLM 目录下，执行创建 docker 镜像的操作，示例如下，具体的可以参看后面的具体构建示例
   
     ```sh
     docker build -f Dockerfile-cuda-env -t langchain-chatglm-cuda-env:1.0.0-dev .
@@ -327,28 +325,42 @@
                   docker build -f Dockerfile-cuda-env -t langchain-chatglm-cuda-env:1.0.0-dev .
                   
                   # 构建 langchain-chatglm 的 前端 qa 问答服务 镜像
-                  docker build -f views/Dockerfile -t langchain-chatglm-qa-admin:1.0.0-dev .
+                  cd views
+                  docker build -f Dockerfile -t langchain-chatglm-qa-admin:1.0.0-dev .
                   
                   # 构建 pcb 对应的 前端 qa 问答服务 镜像
-                  docker build -f views/Dockerfile -t langchain-chatglm-qa-pcb:1.0.0-dev .
+                  cd views-pcb
+                  docker build -f Dockerfile -t langchain-chatglm-qa-pcb:1.0.0-dev .
+                  
+                  # 由于同名且同版本的镜像在进行重复构建时，会导致原先的镜像文件名称和版本为<none>，从而使得其占用着空间但是没有用，因而需要手动删除这些文件，释放空间
+                  # 下面是手动删除的命令示例，先不要使用 -f ，防止出现过度删除的情况
+                  docker rmi $(docker images | grep "<none>" | awk '{print $3}')
+                  docker rmi langchain-chatglm-cuda-env:1.0.0-dev
+                  # 不推荐使用 docker image prune -a 这个会删除你虽然后面还想用，但是临时不用的镜像，比较彻底，容易删除一些你想要缓存的镜像文件
                   
                   ```
-              
-                  
-              
-              * 其他
   
       * 启动 langchain-chatglm 的服务命令示例如下
   
           ```sh
-          # 进入 docker 目录，通过 tree 命令，可以看到当前目录结构，当前目录也是容器映射数据卷的目录
+          # 将本项目中 docker 目录整个上传到服务器的某个有权限读写的目录下，必须要有权限读写，否则会出现异常的bug
+          # 进入 docker 目录，通过 tree 命令，可以看到当前目录结构，当前目录也是容器映射数据卷的目录，包含有配置文件、模型文件、知识库文件等
           (base) ubuntu@ip-172-31-15-150:/newdata/llm/docker$ tree
           .
           ├── docker-compose.yml
           ├── langchain-ChatGLM
-          │   ├── configs
-          │   ├── knowledge_base
-          │   └── model
+          │   ├── configs		# 配置文件目录
+          │   │   └── model_config.py
+          │   ├── knowledge_base	# 知识库目录，用于存放文本向量文件
+          │   │   └── pcb_dev_001
+          │   │       ├── content
+          │   │       │   ├── TJA1050.txt
+          │   │       │   └── tmp_files
+          │   │       │       └── load_file.txt
+          │   │       └── vector_store
+          │   │           ├── index.faiss
+          │   │           └── index.pkl
+          │   └── model	# 大语言模型 和 向量化模型 存放的本地文件目录
           │       ├── chatglm2-6b
           │       │   ├── MODEL_LICENSE
           │       │   ├── README.md
@@ -387,91 +399,152 @@
                   ├── admin.htpasswd
                   └── pcb.htpasswd
           
-          10 directories, 32 files
+          15 directories, 38 files
           
           
-          # 启动 langchain-chatglm 的后端服务 webui.py
-          docker compose up -d 
+          # 启动 langchain-chatglm 的问答服务，包括 api、管理端
+          docker compose up -d langchain-chatglm-api langchain-chatglm-qa-admin
+          
+          # 启动 langchain-chatglm 的问答服务 pcb业务端
+          docker compose up -d langchain-chatglm-qa-pcb
+          
+          # 启动 langchain-chatglm 的 webui.py 服务（由于也会加载大模型，在 api 启动时最好不要再启动后，否则显存不够）
+          docker compose up -d langchain-chatglm-webui
+          
+          # 查看容器日志
+          docker logs -f --tail 10 langchain-chatglm-api
+          
+          ```
+          
+          
+  
+  * 为了在公网环境下尽可能的提供安全性，因此，这里通过配置nginx访问密码的方式来实现，下面先给出整理逻辑，然后，再根据本项目实际情况，进行nginx服务部署
+  
+      * 整体基本逻辑如下
+  
+          要求用户在访问Nginx服务时输入用户名和密码，你需要设置HTTP基本身份验证。以下是具体的步骤：
+
+          1. 生成密码文件：Nginx使用的是Apache的 `htpasswd` 工具生成的密码文件，因此你需要首先安装Apache的工具包。使用下面的命令安装：
+
+             对于 Ubuntu 或者 Debian：
+
+             ```
+             sudo apt-get install apache2-utils
+             ```
+
+             对于 CentOS 或者 RHEL：
+
+             ```
+             sudo yum install httpd-tools
+             ```
+
+             然后你可以使用下面的命令生成一个密码文件，将 `user` 替换为你想要的用户名，将 `/etc/nginx/.htpasswd` 替换为你想要存放密码文件的位置：
+
+             ```
+             sudo htpasswd -c /etc/nginx/.htpasswd user
+             ```
+
+             这将提示你输入密码。输入完成后，密码文件就生成好了。
+
+          2. 修改Nginx配置：然后你需要在Nginx的配置文件中添加以下内容来启用HTTP基本身份验证：
+
+             ```
+             location / {
+                 auth_basic "Restricted"; # 开启验证并设置提示字符串
+                 auth_basic_user_file /etc/nginx/.htpasswd; # 密码文件位置
+             }
+             ```
+
+             请根据你的实际情况修改上述配置。
+
+          3. 这个时候，你需要在 docker-compose.yml 文件中映射这个密码文件以及nginx配置文件到nginx容器里。
+
+             以下是一个 docker-compose.yml 文件的例子：
+
+             ```
+             bashCopy codeversion: '3'
+
+             services:
+               nginx:
+                 image: nginx:latest
+                 ports:
+                   - "81:80"
+                 volumes:
+                   - ./nginx.conf:/etc/nginx/nginx.conf:ro
+                   - ./path_to_your_htpasswd:/etc/nginx/.htpasswd:ro
+             ```
+
+             请确保将 `./path_to_your_htpasswd` 替换为你的 htpasswd 文件的实际路径，而且这个路径是在宿主机上的路径，不是在容器内的路径。然后将 `./nginx.conf` 替换为你的 nginx 配置文件的实际路径。
+
+          4. 重启Nginx：最后，使用 docker-compose 来启动你的服务：
+
+             ```
+             docker-compose up -d
+             ```
+             
+          现在，当用户尝试访问你的Nginx服务时，应该会提示他们输入用户名和密码。
+  
+      * 由于上一步已经上传好了 docker 目录，因而，这里直接在 docker 目录下操作
+  
+          ```sh
+          # 由于 docker 目录下已经配置好 nginx 需要的配置文件和密码文件等，因而直接启动服务即可
+          docker compose up -d nginx-web
+          
+          # 启动后，可以通过查看 docker/nginx/log/error.log 来看是否有错误信息
+          # 访问服务
+          问答服务-admin
+              http://161.189.151.215:81
+              admin
+              klt2023
+          问答服务-pcb
+          	http://161.189.151.215:82
+          	pcb
+          	klt2023
+          
           ```
   
-          
+      * 由于 问答服务-pcb 的访问也加上了 账号密码 限制，因而其他的服务器的nginx要进行反向代理时，需要进行如下配置
   
-  * 执行 docker compose 命令，创建并启动容器
+          * 基本逻辑说明
   
-      ```sh
-      docker compose up -d langchain-chatglm-api
-      ```
+              需要在 B 服务器上的 Nginx 通过反向代理访问 A 服务器上启用了 auth_basic 验证的 82 端口，可以使用 proxy_set_header 指令添加 HTTP Basic Auth 信息。这是一个大概的配置例子，可能需要根据实际情况进行一些调整：
   
-      这里使用的 docker-compose.yml 内容中，包含有对应服务的启动命令，比如启动 webui 或 api 服务等
+              ```
+              server {
+                  listen 80;
+                  server_name your_domain_or_IP;
+              
+                  location / {
+                      proxy_pass http://A服务器的IP:82; 
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              
+                      proxy_set_header Authorization "Basic base64_encoded_username:password";
+                  }
+              }
+              ```
   
-      
+              在上面的配置中，你需要将 `your_domain_or_IP` 替换为你的域名或者 B 服务器的 IP 地址，将 `A服务器的IP` 替换为 A 服务器的 IP 地址。`base64_encoded_username:password` 是你的用户名和密码的 Base64 编码，你可以通过这样一个命令生成：`echo -n 'username:password' | base64`。
   
-  * 为了在公网环境下尽可能的提供安全性，因此，这里通过配置nginx访问密码的方式来实现
+              注意，这个配置会将所有访问 B 服务器的请求都转发到 A 服务器上，如果你只需要转发一部分请求，你可能需要调整 `location` 指令。
   
-      要求用户在访问Nginx服务时输入用户名和密码，你需要设置HTTP基本身份验证。以下是具体的步骤：
+              这样设置之后，当有请求访问 B 服务器的时候，B 服务器会将请求代理到 A 服务器，并在请求头中添加验证信息。
   
-      1. 生成密码文件：Nginx使用的是Apache的 `htpasswd` 工具生成的密码文件，因此你需要首先安装Apache的工具包。使用下面的命令安装：
+          * 配置信息如下
   
-         对于 Ubuntu 或者 Debian：
+              ```sh
+              # 问答服务-pcb
+              location /gpt-pcb {
+                  proxy_pass http://161.189.151.215:82; 
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header Authorization "Basic cGNiOmtsdDIwMjM=";
+              }
+              ```
   
-         ```
-         sudo apt-get install apache2-utils
-         ```
-  
-         对于 CentOS 或者 RHEL：
-  
-         ```
-         sudo yum install httpd-tools
-         ```
-  
-         然后你可以使用下面的命令生成一个密码文件，将 `user` 替换为你想要的用户名，将 `/etc/nginx/.htpasswd` 替换为你想要存放密码文件的位置：
-  
-         ```
-         sudo htpasswd -c /etc/nginx/.htpasswd user
-         ```
-  
-         这将提示你输入密码。输入完成后，密码文件就生成好了。
-  
-      2. 修改Nginx配置：然后你需要在Nginx的配置文件中添加以下内容来启用HTTP基本身份验证：
-  
-         ```
-         location / {
-             auth_basic "Restricted"; # 开启验证并设置提示字符串
-             auth_basic_user_file /etc/nginx/.htpasswd; # 密码文件位置
-         }
-         ```
-  
-         请根据你的实际情况修改上述配置。
-  
-      3. 这个时候，你需要在 docker-compose.yml 文件中映射这个密码文件以及nginx配置文件到nginx容器里。
-  
-         以下是一个 docker-compose.yml 文件的例子：
-  
-         ```
-         bashCopy codeversion: '3'
-         
-         services:
-           nginx:
-             image: nginx:latest
-             ports:
-               - "81:80"
-             volumes:
-               - ./nginx.conf:/etc/nginx/nginx.conf:ro
-               - ./path_to_your_htpasswd:/etc/nginx/.htpasswd:ro
-         ```
-  
-         请确保将 `./path_to_your_htpasswd` 替换为你的 htpasswd 文件的实际路径，而且这个路径是在宿主机上的路径，不是在容器内的路径。然后将 `./nginx.conf` 替换为你的 nginx 配置文件的实际路径。
-  
-      4. 重启Nginx：最后，使用 docker-compose 来启动你的服务：
-  
-         ```
-         Copy code
-         docker-compose up -d
-         ```
-  
-         现在，当用户尝试访问你的Nginx服务时，应该会提示他们输入用户名和密码。
-  
-  * 其他
+              
 
 ## 使用问题记录
 
@@ -495,4 +568,88 @@
       VECTOR_SEARCH_TOP_K = 3
       ```
 
-      
+
+## 其他笔记
+
+* 拉取 gitlab 远程的代码，合并到当前本地代码分支
+
+
+  可以用以下步骤从gitlib拉取修改并合并到您当前的分支：
+
+  1. 首先，使用`fetch`命令从gitlib远程拉取更新：
+
+     ```sh
+     git fetch gitlib
+     ```
+
+  2. 拉取完成后，您可以查看gitlib上的分支和修改。如果您知道要合并的特定分支，例如主分支（通常是`master`或`main`），则可以使用`merge`命令进行合并：
+
+     ```sh
+     git merge gitlib/main
+     ```
+
+     如果您不确定要合并哪个分支，可以使用`branch -a`命令查看所有分支：
+
+     ```sh
+     git branch -a
+     ```
+
+     这将显示您的本地和远程分支。查找以`remotes/gitlib/`开头的分支，然后选择要合并的分支。
+
+  3. 如果合并过程中存在冲突，您需要手动解决冲突。编辑包含冲突的文件，解决问题后，使用`add`命令将它们添加到暂存区：
+
+     ```sh
+     git add conflicted_file
+     ```
+
+     然后继续完成合并过程：
+
+     ```sh
+     git commit -m "Resolved merge conflicts"
+     ```
+
+  4. 如果您想要将这些更改推送到`origin`，您可以使用`push`命令：
+
+     ```sh
+     git push origin your_branch
+     ```
+
+  在处理git合并时，请注意备份您的工作。合并可能会引起冲突，需要您手动解决。在处理这些问题时，尽量确保您的代码安全。
+
+* 要求线上版本强制拉取使用本地最新版本，忽略线上版本的修改
+
+  首先，需要确定你的远程和分支。如果你不确定，可以使用下面的命令查看：
+
+  ```sh
+  git remote -v
+  git branch
+  ```
+
+  然后，你可以使用下面的命令强制更新：
+
+  ```sh
+  git fetch origin
+  git reset --hard origin/your-branch
+  ```
+
+  这里，`origin`是你的远程的名称，`your-branch`是你的分支名称。
+
+  这样做会使得你的本地代码库完全和远程的代码库一样，但是这也意味着你所有未提交的本地修改都将丢失。因此，在执行这些命令之前，请确认你不需要保留这些本地的修改。
+
+* 使用 dockerfile 构建镜像时，需要执行 COPY . /chatGLM/ ，但是，我在当前目录中，有一个叫 model 的目录不想复制到镜像中，我应该怎么写
+
+  你需要创建一个.dockerignore文件，它的功能类似于.gitignore文件。这个文件中可以定义那些在构建镜像过程中应该被忽略的文件或者目录。
+
+  在你的项目的根目录下创建一个名为.dockerignore的文件，然后在该文件中添加以下内容：
+
+  ```
+  model/
+  ```
+
+  这样，在构建镜像的过程中，Docker 就会忽略名为 model 的目录，而其他文件和目录将被正常复制到镜像中。
+
+* pycharm 或 idea 在使用 Services -> docker 查看容器运行日志时，日志内容乱码
+
+  点击 Help -> Edit Custom VM Options...  在文件中，添加 -Dfile.encoding=utf-8 ，重启 pycharm 即可
+
+* 其他

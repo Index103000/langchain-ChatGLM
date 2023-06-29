@@ -1,7 +1,31 @@
 FROM  nvidia/cuda:12.1.0-runtime-ubuntu20.04
 LABEL MAINTAINER="langchain-chatglm"
 
+COPY agent /langchain-ChatGLM/agent
+
+COPY chains /langchain-ChatGLM/chains
+
+COPY configs /langchain-ChatGLM/configs
+
+COPY loader /langchain-ChatGLM/loader
+
+COPY models /langchain-ChatGLM/models
+
+COPY nltk_data /langchain-ChatGLM/nltk_data
+
+COPY textsplitter /langchain-ChatGLM/textsplitter
+
+COPY utils /langchain-ChatGLM/utils
+
+COPY vectorstores /langchain-ChatGLM/vectorstores
+
+COPY api.py /langchain-ChatGLM/
+
 COPY requirements.txt /langchain-ChatGLM/
+
+COPY webui.py /langchain-ChatGLM/
+
+COPY webui_st.py /langchain-ChatGLM/
 
 WORKDIR /langchain-ChatGLM
 

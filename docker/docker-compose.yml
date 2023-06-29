@@ -4,6 +4,7 @@ services:
   langchain-chatglm-webui:
     image: langchain-chatglm-cuda-env:1.0.0-dev
     container_name: langchain-chatglm-webui
+    runtime: nvidia
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       # 时区上海
@@ -12,7 +13,12 @@ services:
       # webui
       - "7860:7860"
     volumes:
-      - /newdata/llm/project/langchain-ChatGLM:/langchain-ChatGLM
+      # 配置文件
+      - ./langchain-ChatGLM/configs:/langchain-ChatGLM/configs
+      # 模型文件
+      - ./langchain-ChatGLM/model:/langchain-ChatGLM/model
+      # 知识库
+      - ./langchain-ChatGLM/knowledge_base:/langchain-ChatGLM/knowledge_base
     command: ["python3", "-u", "webui.py"]
     privileged: true
     network_mode: "host"
@@ -20,6 +26,7 @@ services:
   langchain-chatglm-api:
     image: langchain-chatglm-cuda-env:1.0.0-dev
     container_name: langchain-chatglm-api
+    runtime: nvidia
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       # 时区上海
@@ -27,8 +34,35 @@ services:
     ports:
       - "7861:7861"
     volumes:
-      - /newdata/llm/project/langchain-ChatGLM:/langchain-ChatGLM
+      # 配置文件
+      - ./langchain-ChatGLM/configs:/langchain-ChatGLM/configs
+      # 模型文件
+      - ./langchain-ChatGLM/model:/langchain-ChatGLM/model
+      # 知识库
+      - ./langchain-ChatGLM/knowledge_base:/langchain-ChatGLM/knowledge_base
     command: [ "python3", "-u", "api.py" ]
+    privileged: true
+    network_mode: "host"
+
+  langchain-chatglm-qa-admin:
+    image: langchain-chatglm-qa-admin:1.0.0-dev
+    container_name: langchain-chatglm-qa-admin
+    environment:
+      # 时区上海
+      TZ: Asia/Shanghai
+    ports:
+      - "4173:4173"
+    privileged: true
+    network_mode: "host"
+
+  langchain-chatglm-qa-pcb:
+    image: langchain-chatglm-qa-pcb:1.0.0-dev
+    container_name: langchain-chatglm-qa-pcb
+    environment:
+      # 时区上海
+      TZ: Asia/Shanghai
+    ports:
+      - "4174:4173"
     privileged: true
     network_mode: "host"
 
@@ -40,15 +74,19 @@ services:
       TZ: Asia/Shanghai
     ports:
       - "80:80"
+      - "81:81"
+      - "82:82"
       - "443:443"
     volumes:
       # 证书映射
-      - /docker/nginx/cert:/etc/nginx/cert
+      - ./nginx/cert:/etc/nginx/cert
       # 配置文件映射
-      - /docker/nginx/conf/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf
       # 页面目录
-      - /docker/nginx/html:/usr/share/nginx/html
+      - ./nginx/html:/usr/share/nginx/html
       # 日志目录
-      - /docker/nginx/log:/var/log/nginx
+      - ./nginx/log:/var/log/nginx
+      # htpassword
+      - ./nginx/htpasswd:/etc/nginx/htpasswd
     privileged: true
     network_mode: "host"

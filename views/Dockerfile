@@ -13,12 +13,12 @@ RUN pnpm install
 
 COPY . /app
 
-RUN pnpm run build
+RUN pnpm run build-only
 
 FROM frontend AS final
 
 COPY --from=frontend /app/dist /app/public
 
-EXPOSE 3002
+EXPOSE 4173
 
 CMD ["pnpm", "run", "preview"]

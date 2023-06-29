@@ -296,7 +296,107 @@
   
       所以，这个命令的意思是在当前目录下，根据 `Dockerfile-cuda` 这个 Dockerfile，构建一个名为 `chatglm-cuda`，标签为 `latest` 的 Docker 镜像。
   
-  * 在 langchain-ChatGLM 目录的 docker 目录下，执行 docker compose 命令，创建并启动容器
+  * 在 langchain-ChatGLM 目录的 docker 目录下，有用于启动服务的 docker-compose.yml 文件 以及 对应 nginx 等的配置，可以将整个docker目录上传到服务器中，保持目录结构，在docker目录下，执行 docker compose up -d xxx 的命令启动服务
+  
+      * 由于使用到的镜像中，包含自定义创建的镜像，因而需要先确保对应镜像文件存在，后期也是通过更新镜像文件进行服务升级
+  
+          * 构建镜像
+  
+              * 这里使用pycharm中创建docker的 Service 来借助服务器中的docker服务，构建镜像
+  
+                  * 选择 Services ，在对应要进行镜像部署的docker连接上，右键，点击 Deploy
+  
+                      ![image-镜像部署1](./langchain-chatglm学习笔记/image-镜像部署1.png)
+  
+                  * 填写镜像信息，镜像名称与 docker-compose.yml 中一致即可，选择对应 Dockerfile 文件，取消构建完成后立即运行，因为需要通过 docker compose 运行，才能进一步配置端口映射等信息
+  
+                      ![image-镜像部署2](./langchain-chatglm学习笔记/image-镜像部署2.png)
+  
+                  * 配置好后，点击 apply ，然后 run 即可开始，因为需要将本地文件上传到服务器，因而在运行时，会有些慢
+  
+                      ![image-镜像部署3](./langchain-chatglm学习笔记/image-镜像部署3.png)
+  
+              * 后端镜像使用项目根目录下的 Dockerfile-cuda-env 文件来构建，对应镜像的自定义名称和版本与docker-compose.yml中一致即可
+  
+              * 前端镜像使用 views 或 views-pcb 目录下的 Dockerfile 文件来构建，对应镜像的自定义名称和版本与docker-compose.yml中一致即可
+              
+              * 由于通过 pycharm 部署 docker 镜像时，后端部分文件过多，因而需要将代码提交后，在线上直接执行构建
+              
+                  ```sh
+                  # 构建 langchain-chatglm cuda版本 镜像
+                  docker build -f Dockerfile-cuda-env -t langchain-chatglm-cuda-env:1.0.0-dev .
+                  
+                  # 构建 langchain-chatglm 的 前端 qa 问答服务 镜像
+                  docker build -f views/Dockerfile -t langchain-chatglm-qa-admin:1.0.0-dev .
+                  
+                  # 构建 pcb 对应的 前端 qa 问答服务 镜像
+                  docker build -f views/Dockerfile -t langchain-chatglm-qa-pcb:1.0.0-dev .
+                  
+                  ```
+              
+                  
+              
+              * 其他
+  
+      * 启动 langchain-chatglm 的服务命令示例如下
+  
+          ```sh
+          # 进入 docker 目录，通过 tree 命令，可以看到当前目录结构，当前目录也是容器映射数据卷的目录
+          (base) ubuntu@ip-172-31-15-150:/newdata/llm/docker$ tree
+          .
+          ├── docker-compose.yml
+          ├── langchain-ChatGLM
+          │   ├── configs
+          │   ├── knowledge_base
+          │   └── model
+          │       ├── chatglm2-6b
+          │       │   ├── MODEL_LICENSE
+          │       │   ├── README.md
+          │       │   ├── config.json
+          │       │   ├── configuration_chatglm.py
+          │       │   ├── modeling_chatglm.py
+          │       │   ├── pytorch_model-00001-of-00007.bin
+          │       │   ├── pytorch_model-00002-of-00007.bin
+          │       │   ├── pytorch_model-00003-of-00007.bin
+          │       │   ├── pytorch_model-00004-of-00007.bin
+          │       │   ├── pytorch_model-00005-of-00007.bin
+          │       │   ├── pytorch_model-00006-of-00007.bin
+          │       │   ├── pytorch_model-00007-of-00007.bin
+          │       │   ├── pytorch_model.bin.index.json
+          │       │   ├── quantization.py
+          │       │   ├── tokenization_chatglm.py
+          │       │   ├── tokenizer.model
+          │       │   └── tokenizer_config.json
+          │       ├── chatglm2-6b.zip
+          │       ├── m3e-base
+          │       │   ├── README.md
+          │       │   ├── config.json
+          │       │   ├── model.safetensors
+          │       │   ├── pytorch_model.bin
+          │       │   ├── special_tokens_map.json
+          │       │   ├── tokenizer.json
+          │       │   ├── tokenizer_config.json
+          │       │   └── vocab.txt
+          │       └── m3e-base.zip
+          └── nginx
+              ├── conf
+              │   └── nginx.conf
+              ├── html
+              │   └── index.html
+              └── htpasswd
+                  ├── admin.htpasswd
+                  └── pcb.htpasswd
+          
+          10 directories, 32 files
+          
+          
+          # 启动 langchain-chatglm 的后端服务 webui.py
+          docker compose up -d 
+          ```
+  
+          
+  
+  * 执行 docker compose 命令，创建并启动容器
   
       ```sh
       docker compose up -d langchain-chatglm-api
@@ -304,66 +404,72 @@
   
       这里使用的 docker-compose.yml 内容中，包含有对应服务的启动命令，比如启动 webui 或 api 服务等
   
-      ```yacas
-      version: '3'
       
-      services:
-        langchan-chatglm-webui:
-          image: langchain-chatglm-cuda-env:1.0.0-dev
-          container_name: langchain-chatglm-webui
-          environment:
-            NVIDIA_VISIBLE_DEVICES: all
-            # 时区上海
-            TZ: Asia/Shanghai
-          ports:
-            # webui
-            - "7860:7860"
-          volumes:
-            - /newdata/llm/project/langchain-ChatGLM:/langchain-ChatGLM
-          command: ["python3", "-u", "webui.py"]
-          privileged: true
-          network_mode: "host"
-      
-        langchan-chatglm-api:
-          image: langchain-chatglm-cuda-env:1.0.0-dev
-          container_name: langchain-chatglm-api
-          environment:
-            NVIDIA_VISIBLE_DEVICES: all
-            # 时区上海
-            TZ: Asia/Shanghai
-          ports:
-            - "7861:7861"
-          volumes:
-            - /newdata/llm/project/langchain-ChatGLM:/langchain-ChatGLM
-          command: [ "python3", "-u", "api.py" ]
-          privileged: true
-          network_mode: "host"
-      
-        nginx-web:
-          image: nginx:1.22.1
-          container_name: nginx-web
-          environment:
-            # 时区上海
-            TZ: Asia/Shanghai
-          ports:
-            - "80:80"
-            - "443:443"
-          volumes:
-            # 证书映射
-            - /docker/nginx/cert:/etc/nginx/cert
-            # 配置文件映射
-            - /docker/nginx/conf/nginx.conf:/etc/nginx/nginx.conf
-            # 页面目录
-            - /docker/nginx/html:/usr/share/nginx/html
-            # 日志目录
-            - /docker/nginx/log:/var/log/nginx
-          privileged: true
-          network_mode: "host"
-      
-      
-      ```
   
-      
+  * 为了在公网环境下尽可能的提供安全性，因此，这里通过配置nginx访问密码的方式来实现
+  
+      要求用户在访问Nginx服务时输入用户名和密码，你需要设置HTTP基本身份验证。以下是具体的步骤：
+  
+      1. 生成密码文件：Nginx使用的是Apache的 `htpasswd` 工具生成的密码文件，因此你需要首先安装Apache的工具包。使用下面的命令安装：
+  
+         对于 Ubuntu 或者 Debian：
+  
+         ```
+         sudo apt-get install apache2-utils
+         ```
+  
+         对于 CentOS 或者 RHEL：
+  
+         ```
+         sudo yum install httpd-tools
+         ```
+  
+         然后你可以使用下面的命令生成一个密码文件，将 `user` 替换为你想要的用户名，将 `/etc/nginx/.htpasswd` 替换为你想要存放密码文件的位置：
+  
+         ```
+         sudo htpasswd -c /etc/nginx/.htpasswd user
+         ```
+  
+         这将提示你输入密码。输入完成后，密码文件就生成好了。
+  
+      2. 修改Nginx配置：然后你需要在Nginx的配置文件中添加以下内容来启用HTTP基本身份验证：
+  
+         ```
+         location / {
+             auth_basic "Restricted"; # 开启验证并设置提示字符串
+             auth_basic_user_file /etc/nginx/.htpasswd; # 密码文件位置
+         }
+         ```
+  
+         请根据你的实际情况修改上述配置。
+  
+      3. 这个时候，你需要在 docker-compose.yml 文件中映射这个密码文件以及nginx配置文件到nginx容器里。
+  
+         以下是一个 docker-compose.yml 文件的例子：
+  
+         ```
+         bashCopy codeversion: '3'
+         
+         services:
+           nginx:
+             image: nginx:latest
+             ports:
+               - "81:80"
+             volumes:
+               - ./nginx.conf:/etc/nginx/nginx.conf:ro
+               - ./path_to_your_htpasswd:/etc/nginx/.htpasswd:ro
+         ```
+  
+         请确保将 `./path_to_your_htpasswd` 替换为你的 htpasswd 文件的实际路径，而且这个路径是在宿主机上的路径，不是在容器内的路径。然后将 `./nginx.conf` 替换为你的 nginx 配置文件的实际路径。
+  
+      4. 重启Nginx：最后，使用 docker-compose 来启动你的服务：
+  
+         ```
+         Copy code
+         docker-compose up -d
+         ```
+  
+         现在，当用户尝试访问你的Nginx服务时，应该会提示他们输入用户名和密码。
   
   * 其他
 

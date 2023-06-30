@@ -50,6 +50,9 @@ class ChatGLM(BaseAnswer, LLM, ABC):
                          history: List[List[str]] = [],
                          streaming: bool = False):
 
+        print(f"streaming => {streaming}")
+        print(f"__call:{prompt}")
+
         if streaming:
             history += [[]]
             for inum, (stream_resp, _) in enumerate(self.checkPoint.model.stream_chat(

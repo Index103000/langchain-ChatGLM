@@ -190,7 +190,7 @@ PROMPT_TEMPLATE = """
 """
 
 
-# 缓存知识库数量
+# 缓存知识库数量,如果是ChatGLM2,ChatGLM2-int4,ChatGLM2-int8模型若检索效果不好可以调成’10’
 CACHED_VS_NUM = 10
 
 # 文本分句长度

@@ -106,18 +106,20 @@ llm_model_dict = {
     # 通过 openai 调用的模型请参考如下格式
     "openai": {
         # "name": "gpt-3.5-turbo-0613",  # "name"修改为openai服务中的"model_name"
-        "name": "gpt-3.5-turbo-16k-0613",  # "name"修改为openai服务中的"model_name"
+        # "name": "gpt-3.5-turbo-16k-0613",  # "name"修改为openai服务中的"model_name"
+        "name": "ggpt-4-0314",  # "name"修改为openai服务中的"model_name"
         # "pretrained_model_name": "gpt-3.5-turbo-0613",
-        "pretrained_model_name": "gpt-3.5-turbo-16k-0613",
+        # "pretrained_model_name": "gpt-3.5-turbo-16k-0613",
+        "pretrained_model_name": "ggpt-4-0314",
         "local_model_path": None,
         "provides": "OpenAILLM",  # 使用openai api时，需保证"provides"为"OpenAILLM"
-        "api_key": "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", # openai服务的 api_key
+        "api_key": "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", # openai服务的 api_key
         "api_base_url": "https://api.openai.com/v1"  # openai服务中的"api_base_url"
     },
 }
 
 # LLM 名称
-LLM_MODEL = "chatglm2-6b"
+LLM_MODEL = "openai"
 # 量化加载8bit 模型
 LOAD_IN_8BIT = False
 # Load the model with bfloat16 precision. Requires NVIDIA Ampere GPU.
@@ -142,10 +144,10 @@ LLM_DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mp
 KB_ROOT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "knowledge_base")
 
 # 基于上下文的prompt模版，请务必保留"{question}"和"{context}"
-PROMPT_TEMPLATE = """已知信息：
-{context}
-
-根据上述已知信息，简洁和专业的来回答用户的问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题” 或 “没有提供足够的相关信息”，不允许在答案中添加编造成分，答案请使用中文。 问题是：{question}"""
+# PROMPT_TEMPLATE = """已知信息：
+# {context}
+#
+# 根据上述已知信息，简洁和专业的来回答用户的问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题” 或 “没有提供足够的相关信息”，不允许在答案中添加编造成分，答案请使用中文。 问题是：{question}"""
 
 # PROMPT_TEMPLATE = """
 # 根据已知信息，以pcb工程师的角度回答问题，以json格式返回结果。
@@ -166,31 +168,35 @@ PROMPT_TEMPLATE = """已知信息：
 # 分隔符
 delimiter = "####"
 
-# PROMPT_TEMPLATE = """
-# 给定知识内容如下：\n
-# ####
-# {context}
-# ####
-# \n
-# 根据给定知识内容，回答下面的问题：\n
-# {question}
-# """
+PROMPT_TEMPLATE = """
+已知信息用####作为分隔符进行包裹
+\n
+####
+{context}
+####
+\n
+根据上述已知信息，用简洁和专业的结论来回答用户的问题。
+如果无法从中得到答案，请说 “根据已知信息无法回答该问题” 或 “没有提供足够的相关信息”。
+不允许在答案中添加编造成分。
+\n
+问题是：{question}
+"""
 
 
 # 缓存知识库数量
-CACHED_VS_NUM = 1
+CACHED_VS_NUM = 10
 
 # 文本分句长度
-SENTENCE_SIZE = 100
+SENTENCE_SIZE = 200
 
 # 匹配后单段上下文长度
 CHUNK_SIZE = 250
 
 # 传入LLM的历史记录长度
-LLM_HISTORY_LEN = 3
+LLM_HISTORY_LEN = 10
 
 # 知识库检索时返回的匹配内容条数
-VECTOR_SEARCH_TOP_K = 5
+VECTOR_SEARCH_TOP_K = 10
 
 # 知识检索内容相关度 Score, 数值范围约为0-1100，如果为0，则不生效，经测试设置为小于500时，匹配结果更精准
 VECTOR_SEARCH_SCORE_THRESHOLD = 0
@@ -227,4 +233,4 @@ BING_SUBSCRIPTION_KEY = ""
 # 是否开启中文标题加强，以及标题增强的相关配置
 # 通过增加标题判断，判断哪些文本为标题，并在metadata中进行标记；
 # 然后将文本与往上一级的标题进行拼合，实现文本信息的增强。
-ZH_TITLE_ENHANCE = False
+ZH_TITLE_ENHANCE = True

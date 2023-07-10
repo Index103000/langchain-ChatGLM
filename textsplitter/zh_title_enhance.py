@@ -1,7 +1,6 @@
 from langchain.docstore.document import Document
 import re
 
-
 def under_non_alpha_ratio(text: str, threshold: float = 0.5):
     """Checks if the proportion of non-alpha characters in the text snippet exceeds a given
     threshold. This helps prevent text like "-----------BREAK---------" from being tagged
@@ -29,7 +28,7 @@ def under_non_alpha_ratio(text: str, threshold: float = 0.5):
 
 def is_possible_title(
         text: str,
-        title_max_word_length: int = 20,
+        title_max_word_length: int = 200,
         non_alpha_threshold: float = 0.5,
 ) -> bool:
     """Checks to see if the text passes all of the checks for a valid title.
@@ -84,13 +83,46 @@ def is_possible_title(
 
     return True
 
+def is_possible_question(
+        text: str,
+        question_start_pattern: str = r"^问：",
+        question_end_pattern: str = r"？$"
+) -> bool:
+    """Checks to see if the text could be a question.
+
+    Parameters
+    ----------
+    text
+        The input text to check
+    question_start_pattern
+        The pattern that a question starts with, default is "问："
+    question_end_pattern
+        The pattern that a question ends with, default is a Chinese question mark
+    """
+
+    # 文本长度为0的话，肯定不是问题
+    if len(text) == 0:
+        print("Not a question. Text is empty.")
+        return False
+
+    # 问题通常以 "问：" 开头
+    if re.match(question_start_pattern, text) is None:
+        return False
+
+    # 问题通常以中文的问号 "？" 结尾
+    if re.search(question_end_pattern, text) is None:
+        return False
+
+    return True
+
 
 def zh_title_enhance(docs: Document) -> Document:
     title = None
     if len(docs) > 0:
         for doc in docs:
-            if is_possible_title(doc.page_content):
-                doc.metadata['category'] = 'cn_Title'
+            # if is_possible_title(doc.page_content):
+            if is_possible_question(doc.page_content):
+                doc.metadata['category'] = 'cn_Question'
                 title = doc.page_content
             elif title:
                 doc.page_content = f"下文与({title})有关。{doc.page_content}"

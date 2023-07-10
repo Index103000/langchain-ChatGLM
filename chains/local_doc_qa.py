@@ -250,12 +250,8 @@ class LocalDocQA:
                 yield response, history
         else:
             resp = """
-{
-    "code": 500,
-    "msg": "抱歉，在知识库中未能解析到答案",
-    "data": ""
-}
-            """
+抱歉，在知识库中未能匹配到可参考的内容
+"""
             history = chat_history
             history += [[query, resp]]
             response = {"query": query,

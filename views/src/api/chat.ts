@@ -1,4 +1,4 @@
-import { api } from './api'
+import {api, apiStream} from './api'
 
 export const chat = (params: any) => {
   return api({
@@ -8,12 +8,28 @@ export const chat = (params: any) => {
   })
 }
 
+export const chatStream = (params: any, controller?: AbortController, onMessage?: Function, onAbortController?: Function, onError?: Function) => {
+  return apiStream({
+    url: '/api/chat',
+    method: 'post',
+    data: JSON.stringify({ ...params, stream: true }),
+  }, controller, onMessage, onAbortController, onError);
+}
+
 export const chatfile = (params: any) => {
   return api({
     url: '/local_doc_qa/local_doc_chat',
     method: 'post',
     data: JSON.stringify(params),
   })
+}
+
+export const chatfileStream = (params: any, controller?: AbortController, onMessage?: Function, onAbortController?: Function, onError?: Function) => {
+  return apiStream({
+    url: '/api/local_doc_qa/local_doc_chat',
+    method: 'post',
+    data: JSON.stringify({ ...params, stream: true }),
+  }, controller, onMessage, onAbortController, onError);
 }
 
 export const getkblist = (knowledge_base_id: any) => {
@@ -30,7 +46,6 @@ export const getfilelist = (knowledge_base_id: any) => {
     url: '/local_doc_qa/list_files',
     method: 'get',
     params: { knowledge_base_id },
-
   })
 }
 export const bing_search = (params: any) => {

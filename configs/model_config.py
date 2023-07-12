@@ -112,12 +112,14 @@ llm_model_dict = {
 
     # 通过 openai 调用的模型请参考如下格式
     "openai": {
+        # "name": "gpt-3.5-turbo",  # "name"修改为openai服务中的"model_name"
         # "name": "gpt-3.5-turbo-0613",  # "name"修改为openai服务中的"model_name"
-        # "name": "gpt-3.5-turbo-16k-0613",  # "name"修改为openai服务中的"model_name"
-        "name": "ggpt-4-0314",  # "name"修改为openai服务中的"model_name"
+        "name": "gpt-3.5-turbo-16k-0613",  # "name"修改为openai服务中的"model_name"
+        # "name": "gpt-4",  # "name"修改为openai服务中的"model_name"
+        # "pretrained_model_name": "gpt-3.5-turbo",
         # "pretrained_model_name": "gpt-3.5-turbo-0613",
-        # "pretrained_model_name": "gpt-3.5-turbo-16k-0613",
-        "pretrained_model_name": "ggpt-4-0314",
+        "pretrained_model_name": "gpt-3.5-turbo-16k-0613",
+        # "pretrained_model_name": "gpt-4",
         "local_model_path": None,
         "provides": "OpenAILLM",  # 使用openai api时，需保证"provides"为"OpenAILLM"
         "api_key": "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", # openai服务的 api_key

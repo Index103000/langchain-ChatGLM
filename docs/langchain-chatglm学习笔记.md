@@ -658,4 +658,35 @@
 
   点击 Help -> Edit Custom VM Options...  在文件中，添加 -Dfile.encoding=utf-8 ，重启 pycharm 即可
 
+* 让 .gitignore 文件中新添加的内容实时生效
+
+  首先，你应确保所有未提交的修改已保存，因为以下步骤将会清除所有未提交的修改。
+
+  1. 将所有更改的文件添加和提交。你可以使用以下命令：
+
+     ```
+     git add . --all
+     git commit -m "保存更改"
+     ```
+
+  2. 移除 Git 存储库中的所有文件。注意，这不会删除物理文件，只是将它们从 Git 的控制中移除：
+
+     ```
+     git rm -r --cached .
+     ```
+
+  3. 最后，将所有文件重新添加到 Git。现在 `.gitignore` 中的新规则应该已生效：
+
+     ```
+     git add .
+     ```
+
+  然后，你可以像往常一样提交更改：
+
+  ```
+  git commit -m "应用 .gitignore 更改"
+  ```
+
+  这样，你的 `.gitignore` 文件中新添加的内容将立即生效。
+
 * 其他
